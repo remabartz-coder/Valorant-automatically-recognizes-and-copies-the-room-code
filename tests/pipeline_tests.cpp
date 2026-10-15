@@ -145,12 +145,28 @@ struct Record {
         std::lock_guard lock(mutex);
         return confirmedCountLocked();
     }
+
+    void dump(const char* context)
+    {
+        std::lock_guard lock(mutex);
+        std::fprintf(stderr, "%s: %zu detections\n", context, detections.size());
+        for (const auto& detection : detections) {
+            std::fprintf(stderr,
+                         "  frame=%llu revision=%llu captured=%.0fms text=[%s] confidence=%.6f raw=%.6f normalized=%s age=%.2fms confirmed=[%s]\n",
+                         static_cast<unsigned long long>(detection.processedFrames),
+                         static_cast<unsigned long long>(detection.revision),
+                         std::chrono::duration<double, std::milli>(detection.receivedAt - detections.front().receivedAt).count(),
+                         detection.result.text.toUtf8().constData(), detection.result.confidence,
+                         detection.result.rawConfidence, detection.result.lineNormalized ? "yes" : "no",
+                         detection.processingMs, detection.confirmed ? detection.confirmed->toUtf8().constData() : "");
+        }
+    }
 };
 
 bool start(RecognitionWorker& worker, Record& record, const QString& modelsDir,
-           int sampleFps = 30, bool enabled = true)
+           int sampleFps = 30, bool enabled = true, GateConfig config = {})
 {
-    worker.start(modelsDir, {}, QRectF(0, 0, 1, 1),
+    worker.start(modelsDir, config, QRectF(0, 0, 1, 1),
                  [&record](Detection detection) { record.detect(std::move(detection)); },
                  [&record](QString status) { record.status(status); }, sampleFps, enabled);
     const bool ready = record.wait([](const Record& value) { return value.ready; });
@@ -257,12 +273,16 @@ void testIsolatedLineNormalization(const QString& modelsDir)
     }
     Record record;
     RecognitionWorker worker;
-    if (!start(worker, record, modelsDir)) return;
+    GateConfig config;
+    // This checks normalization and frame identity; default-age timing has separate coverage.
+    config.maxAgeMs = 4000;
+    if (!start(worker, record, modelsDir, 30, true, config)) return;
     if (!offerAndWait(worker, record, image, 1, Clock::now())) return;
     expect(record.confirmedCount() == 0, "normalization does not replace independent frame confirmation");
     if (!offerAndWait(worker, record, image, 1, Clock::now())) return;
     expect(record.confirmedCount() == 0, "normalized duplicate frame cannot confirm");
     if (!offerAndWait(worker, record, image, 2, Clock::now())) return;
+    if (record.confirmedCount() != 1) record.dump("isolated line normalization");
     expect(record.confirmedCount() == 1, "two independent normalized frames can confirm");
     {
         std::lock_guard lock(record.mutex);
@@ -274,7 +294,7 @@ void testIsolatedLineNormalization(const QString& modelsDir)
                "normalization recovers the loose region without lowering the confidence gate");
     }
     worker.setRoi(QRectF(0, 0, 1, 1));
-    const auto stale = Clock::now() - std::chrono::seconds(2);
+    const auto stale = Clock::now() - std::chrono::milliseconds(config.maxAgeMs + 2000);
     if (!offerAndWait(worker, record, image, 3, stale)) return;
     if (!offerAndWait(worker, record, image, 4, stale)) return;
     expect(record.confirmedCount() == 1, "stale normalized frames cannot confirm");
@@ -506,9 +526,12 @@ void testDenseStream(const QString& modelsDir)
     Record record;
     RecognitionWorker worker;
     if (!start(worker, record, modelsDir)) return;
+    // Load the detector before measuring steady-state throughput with the default freshness gate.
+    if (!offerAndWait(worker, record, image, 1, Clock::now() - std::chrono::seconds(2))) return;
+    expect(record.confirmedCount() == 0, "dense detector warm-up cannot confirm an expired frame");
     const auto began = Clock::now();
     std::jthread producer([&worker, &image](std::stop_token stop) {
-        std::uint64_t sequence = 0;
+        std::uint64_t sequence = 1;
         while (!stop.stop_requested()) {
             worker.offer({image, ++sequence, Clock::now(), 0});
             std::this_thread::sleep_for(std::chrono::milliseconds(33));
@@ -520,20 +543,21 @@ void testDenseStream(const QString& modelsDir)
         confirmed = record.changed.wait_until(lock, std::min(overallDeadline, began + std::chrono::seconds(2)), [&] {
             return record.error || record.confirmedCountLocked() > 0;
         }) && !record.error && record.confirmedCountLocked() == 1;
-        expect(confirmed, "a continuous 30 FPS dense stream confirms within two seconds");
+        expect(confirmed, "a continuous 30 FPS dense stream confirms within two seconds after detector warm-up");
         if (confirmed) {
             const auto found = std::find_if(record.detections.begin(), record.detections.end(), [](const auto& value) {
                 return value.confirmed.has_value();
             });
             expect(found->confirmed == QStringLiteral("TYH663"), "dense stream confirms the complete room code");
-            std::printf("Dense stream confirmed after %.0fms; cold=%.0fms confirmed-frame=%.0fms\n",
+            std::printf("Dense stream confirmed after %.0fms; warmup=%.0fms confirmed-frame=%.0fms\n",
                         std::chrono::duration<double, std::milli>(Clock::now() - began).count(),
-                        record.detections.front().processingMs, found->processingMs);
+                        record.detections.front().result.inferenceMs, found->processingMs);
         }
     }
     producer.request_stop();
     producer.join();
     worker.stop();
+    if (!confirmed) record.dump("continuous dense stream");
 }
 
 void testNewCodeInvalidatesGeometry(const QString& modelsDir)

@@ -15,6 +15,7 @@
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QMouseEvent>
+#include <QPainter>
 #include <QPixmap>
 #include <QPushButton>
 #include <QSettings>
@@ -42,7 +43,7 @@ constexpr qint64 overallWaitMs = 18000;
 
 void expect(bool condition, const char* message) {
     if (!condition) {
-        std::fprintf(stderr, "FAIL: %s\n", message);
+        std::fprintf(stderr, "FAIL at %lld ms: %s\n", static_cast<long long>(elapsed.elapsed()), message);
         ++failures;
     }
 }
@@ -77,6 +78,33 @@ Widget* textWidget(MainWindow& window, const QString& text) {
 bool isDemoCode(const QString& text) {
     return text == QStringLiteral("TYH663") || text == QStringLiteral("ABC123") ||
         text == QStringLiteral("H6T3Y6");
+}
+
+bool writeCodeVideo(QTemporaryFile& file, const QString& code) {
+    if (!file.open()) return false;
+    QImage image(384, 128, QImage::Format_RGB32);
+    image.fill(QColor(25, 25, 25));
+    QPainter painter(&image);
+    QFont font(QStringLiteral("Arial"));
+    font.setPixelSize(64);
+    font.setBold(true);
+    painter.setFont(font);
+    painter.setPen(Qt::white);
+    painter.setRenderHint(QPainter::TextAntialiasing);
+    painter.drawText(image.rect(), Qt::AlignCenter, code);
+    painter.end();
+    const QImage gray = image.convertToFormat(QImage::Format_Grayscale8);
+    const QByteArray header = QByteArrayLiteral("YUV4MPEG2 W384 H128 F10:1 Ip A1:1 Cmono\n");
+    if (file.write(header) != header.size()) return false;
+    // Constant video content keeps rule changes independent of the rotating demo's phase.
+    for (int frame = 0; frame < 200; ++frame) {
+        if (file.write("FRAME\n") != 6) return false;
+        for (int y = 0; y < gray.height(); ++y) {
+            if (file.write(reinterpret_cast<const char*>(gray.constScanLine(y)), gray.width()) != gray.width())
+                return false;
+        }
+    }
+    return file.flush();
 }
 
 QPointF previewPoint(const PreviewWidget& preview, qreal x, qreal y) {
@@ -348,21 +376,44 @@ int main(int argc, char** argv) {
     expect(waitFor([&] { return isDemoCode(confirmed->text()); }, 1500),
            "sixty-FPS sampling continues to confirm codes");
 
+    QTemporaryFile orderedVideo(QDir::tempPath() + QStringLiteral("/queuepilot-ordered-XXXXXX.y4m"));
+    QTemporaryFile mixedVideo(QDir::tempPath() + QStringLiteral("/queuepilot-mixed-XXXXXX.y4m"));
+    expect(writeCodeVideo(orderedVideo, QStringLiteral("TYH663")) &&
+           writeCodeVideo(mixedVideo, QStringLiteral("H6T3Y6")),
+           "constant ordered and mixed-order videos can be created");
+    if (failures != 0) {
+        stop->click();
+        return 1;
+    }
+    orderedVideo.close();
+    mixedVideo.close();
+    const auto startRuleVideo = [&](const QString& path) {
+        sourceType->setCurrentIndex(2);
+        source->setText(path);
+        preview->setRoi(QRectF(0, 0, 1, 1));
+        play->click();
+        recognize->click();
+    };
+    startRuleVideo(orderedVideo.fileName());
+    expect(waitFor([&] { return confirmed->text() == QStringLiteral("TYH663"); }, 1500),
+           "fixed ordered fixture confirms before runtime rule changes");
     expect(format->isEnabled() && threshold->isEnabled(), "recognition rules can be changed during playback");
     expect(format->count() == 2, "every available format requires three uppercase letters and three digits");
     threshold->setValue(threshold->maximum());
     expect(confirmed->text() == QStringLiteral("------"), "confidence change invalidates the old confirmed code");
     threshold->setValue(.90);
-    expect(waitFor([&] { return isDemoCode(confirmed->text()); }, 1500),
+    expect(waitFor([&] { return confirmed->text() == QStringLiteral("TYH663"); }, 1500),
            "restoring confidence reconfirms the code without restarting playback");
     format->setCurrentIndex(1);
     expect(confirmed->text() == QStringLiteral("------"), "format change clears the previous confirmation");
-    expect(waitFor([&] { return isDemoCode(confirmed->text()); }, 1500),
+    expect(waitFor([&] { return confirmed->text() == QStringLiteral("TYH663"); }, 1500),
            "ordered format continues recognizing matching codes");
     format->setCurrentIndex(0);
 
     auto* raw = window.findChild<QLabel*>(QStringLiteral("rawCandidate"));
-    expect(raw && waitFor([&] { return raw->text().contains(QStringLiteral("H6T3Y6")); }, 12500),
+    stop->click();
+    startRuleVideo(mixedVideo.fileName());
+    expect(raw && waitFor([&] { return raw->text().contains(QStringLiteral("H6T3Y6")); }, 1500),
            "mixed-order fixture becomes the current raw OCR candidate");
     if (failures != 0) {
         stop->click();
