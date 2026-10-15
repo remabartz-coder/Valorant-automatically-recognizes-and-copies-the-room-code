@@ -3,8 +3,8 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 $suffix = (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 6)
 $destination = Join-Path $projectRoot "dist/QueuePilot-source-$suffix"
 New-Item -ItemType Directory -Path $destination -Force | Out-Null
-$relativeFiles = @('CMakeLists.txt', 'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'CONTRIBUTING.md', '.gitignore')
-$extensions = @('.cpp', '.h', '.qrc', '.in', '.ps1', '.cmd', '.md', '.txt', '.json', '.yml', '.yaml', '.png', '.ico')
+$relativeFiles = @('CMakeLists.txt', 'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'CONTRIBUTING.md', '.gitignore', 'scripts/onnxruntime.def')
+$extensions = @('.cpp', '.h', '.qrc', '.in', '.def', '.ps1', '.cmd', '.md', '.txt', '.json', '.yml', '.yaml', '.png', '.ico')
 foreach ($directory in @('src', 'scripts', 'tests', 'licenses', 'assets', 'docs', '.github')) {
     $directoryPath = Join-Path $projectRoot $directory
     if (-not (Test-Path -LiteralPath $directoryPath)) { continue }
@@ -19,7 +19,7 @@ foreach ($directory in @('src', 'scripts', 'tests', 'licenses', 'assets', 'docs'
     }
 }
 $relativeFiles += @('models/recognizer.onnx', 'models/detector.onnx', 'models/keys.txt', 'models/README.md')
-foreach ($relative in ($relativeFiles | Sort-Object -Unique)) {
+foreach ($relative in ($relativeFiles | ForEach-Object { $_.Replace('\', '/') } | Sort-Object -Unique)) {
     $source = Join-Path $projectRoot $relative
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw "Source file is missing: $relative" }
     $target = Join-Path $destination $relative

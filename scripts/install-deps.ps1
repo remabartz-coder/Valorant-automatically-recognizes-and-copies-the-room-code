@@ -8,6 +8,10 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'native-tools.ps1')
+$definitionFile = Join-Path $PSScriptRoot 'onnxruntime.def'
+if (-not (Test-Path -LiteralPath $definitionFile -PathType Leaf)) {
+    throw 'The source checkout is incomplete: scripts/onnxruntime.def is missing. Restore it before installing dependencies.'
+}
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $downloadRoot = Join-Path $projectRoot '.deps\downloads'
 New-Item -ItemType Directory -Force $downloadRoot | Out-Null
@@ -95,7 +99,7 @@ else {
     $libPath = Get-ChildItem "$vsPath\VC\Tools\MSVC\*\bin\Hostx64\x64\lib.exe" | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
 }
 if (-not $libPath) { throw 'MSVC lib.exe is required to generate the ONNX import library.' }
-& $libPath "/def:$PSScriptRoot\onnxruntime.def" /machine:x64 "/out:$ortRoot\lib\onnxruntime.lib"
+& $libPath "/def:$definitionFile" /machine:x64 "/out:$ortRoot\lib\onnxruntime.lib"
 if ($LASTEXITCODE) { throw 'ONNX import library creation failed.' }
 $modelDir = Join-Path $projectRoot 'models'
 New-Item -ItemType Directory -Force $modelDir | Out-Null
