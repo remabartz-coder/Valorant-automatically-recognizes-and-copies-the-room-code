@@ -8,7 +8,7 @@ Windows 桌面程序，从抖音直播、媒体流或窗口画面中识别无畏
 
 ## 使用
 
-支持 Windows 10 1903+ / Windows 11 x64。自行构建后运行 `build/Release/QueuePilot.exe`，或通过打包脚本生成本地便携目录。
+支持 Windows 10 1903+ / Windows 11 x64。从 [GitHub Releases](https://github.com/remabartz-coder/Valorant-automatically-recognizes-and-copies-the-room-code/releases/latest) 下载 `QueuePilot-Windows-x64-vX.Y.Z.zip`，完整解压后运行 `QueuePilot.exe`，不要只提取 EXE。GitHub 自动生成的 `Source code` 归档不是可运行包。开发者也可自行构建后运行 `build/Release/QueuePilot.exe`。
 
 1. 在“来源”选择直播链接、媒体流、本地视频或窗口采集。直播链接支持 `https://live.douyin.com/<房间号>` 和带 `live_web_rid` 参数的页面。点击“开始播放”。
 2. 在预览中框住房间码所在的输入框，允许包含留白和周围文字；也可点击“自动定位房间码”。选好后可锁定框选，播放和识别会继续。
@@ -50,7 +50,7 @@ Windows 桌面程序，从抖音直播、媒体流或窗口画面中识别无畏
 
 依赖安装在 `.deps`，下载均校验固定 SHA-256/SHA-512。Qt 6.8.3、精简 FFmpeg n8.1.3、ONNX Runtime 1.31.0；识别使用 PP-OCRv3 英文模型，定位使用 PP-OCRv4 检测模型。原生 ONNX DLL 从官方 wheel 提取，不安装 Python。精简 FFmpeg 禁用外部自动探测，使用 Windows Schannel 处理 HTTPS。
 
-公开 Windows 包使用固定的官方 Qt/FFmpeg 源码构建。`fetch-release-materials.ps1` 会下载对应源码和微软官方再分发清单，`build-ffmpeg.ps1` 会在哈希不匹配或缺少 make 时停止。详见 [依赖来源](licenses/SOURCES.md) 和 [发布清单](docs/RELEASING.md)。
+公开 Windows 包使用固定版本的 Qt 官方 SDK，以及从官方源码构建的精简 FFmpeg，并附带对应源码和构建记录。`fetch-release-materials.ps1` 会下载对应源码和微软官方再分发清单，`build-ffmpeg.ps1` 会在哈希不匹配或缺少 make 时停止。详见 [依赖来源](licenses/SOURCES.md) 和 [发布清单](docs/RELEASING.md)。
 
 仓库标签工作流会生成 Draft Windows Release，完成便携包、对应源码包和 SHA-256 清单的上传后才公开。发布标签必须与 `CMakeLists.txt` 中的项目版本一致，例如 `v0.1.0`。
 
@@ -67,7 +67,7 @@ Windows 桌面程序，从抖音直播、媒体流或窗口画面中识别无畏
 
 自动测试覆盖码型规则、页面解析、输入限制、OCR 原图和宽边距样例、定位歧义及预算、UI 流程、预览尺寸稳定性、语音生命周期和本地视频。`window_capture` 需要正常 Windows 桌面。测试关闭剪贴板、真实播音和游戏按键输出。
 
-可选 `real_video_tests` 接受经 `fps=4` 提取的录屏帧，通过 `QUEUEPILOT_REAL_VIDEO_FRAMES` 指定目录；完整私人录屏及导出帧不随源码分发。已有记录及其局限见 [验证说明](docs/VALIDATION.md)。GitHub Actions 工作流尚需在目标仓库实际运行验证。
+可选 `real_video_tests` 接受经 `fps=4` 提取的录屏帧，通过 `QUEUEPILOT_REAL_VIDEO_FRAMES` 指定目录；完整私人录屏及导出帧不随源码分发。已有记录及其局限见 [验证说明](docs/VALIDATION.md)。2026-10-15 的 [GitHub Windows 构建与测试](https://github.com/remabartz-coder/Valorant-automatically-recognizes-and-copies-the-room-code/actions/runs/38685764714) 已通过，包含从源码构建精简 FFmpeg。
 
 ## 许可
 
