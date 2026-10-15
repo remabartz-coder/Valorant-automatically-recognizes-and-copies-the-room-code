@@ -38,7 +38,7 @@ Windows 桌面程序，从抖音直播、媒体流或窗口画面中识别无畏
 
 ## 构建
 
-需要 Visual Studio 2022 的 C++ 桌面工具、Windows SDK、CMake 3.24+、PowerShell 和网络访问。
+需要 Visual Studio 2022 的 C++ 桌面工具、Windows SDK、CMake 3.24+、7-Zip、PowerShell 和网络访问。Qt 的 `.7z` 包通过 7-Zip 解压，避免 Windows 自带 `tar.exe` 缺少 LZMA 支持；安装脚本会从 PATH 或默认安装目录查找，也可用 `-SevenZip <7z.exe路径>` 指定。GitHub Windows 运行器使用预装的 7-Zip。
 
 ```powershell
 ./scripts/install-deps.ps1

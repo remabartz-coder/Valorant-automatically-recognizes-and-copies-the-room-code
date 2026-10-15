@@ -22,7 +22,7 @@ jobs:
         shell: pwsh
         env:
           QUEUEPILOT_FFMPEG_URL: ${{ vars.QUEUEPILOT_FFMPEG_URL }}
-        run: ./scripts/install-deps.ps1 -FFmpegArchiveUrl $env:QUEUEPILOT_FFMPEG_URL
+        run: ./scripts/install-deps.ps1 -FFmpegArchiveUrl $env:QUEUEPILOT_FFMPEG_URL -SevenZip 'C:/Program Files/7-Zip/7z.exe'
       - name: Build And Verify
         shell: pwsh
         run: ./scripts/verify.ps1 -SkipDesktopTests

@@ -3,7 +3,8 @@ param(
     [switch]$SkipFFmpeg,
     [string]$VisualStudio,
     [string]$FFmpegArchive,
-    [string]$FFmpegArchiveUrl
+    [string]$FFmpegArchiveUrl,
+    [string]$SevenZip
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'native-tools.ps1')
@@ -22,7 +23,25 @@ function Fetch([string]$Url, [string]$Name, [string]$Sha256) {
 }
 function Extract([string]$Archive, [string]$Destination) {
     New-Item -ItemType Directory -Force $Destination | Out-Null
-    & tar.exe -xf $Archive -C $Destination
+    if ([System.IO.Path]::GetExtension($Archive) -ieq '.7z') {
+        $extractor = $SevenZip
+        if (-not $extractor) {
+            $command = Get-Command 7z.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($command) { $extractor = $command.Source }
+        }
+        if (-not $extractor) {
+            foreach ($directory in @($env:ProgramFiles, ${env:ProgramFiles(x86)})) {
+                if (-not $directory) { continue }
+                $candidate = Join-Path $directory '7-Zip/7z.exe'
+                if (Test-Path -LiteralPath $candidate -PathType Leaf) { $extractor = $candidate; break }
+            }
+        }
+        if (-not $extractor) { throw '7-Zip is required for the Qt .7z archive. Install 7-Zip or pass -SevenZip <path/to/7z.exe>.' }
+        $extractor = (Resolve-Path -LiteralPath $extractor -ErrorAction Stop).Path
+        & $extractor x -y -bsp0 "-o$Destination" -- $Archive
+    } else {
+        & tar.exe -xf $Archive -C $Destination
+    }
     if ($LASTEXITCODE) { throw "Extraction failed: $Archive" }
 }
 
