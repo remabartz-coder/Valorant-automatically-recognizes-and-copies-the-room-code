@@ -41,18 +41,22 @@ Windows 桌面程序，从抖音直播、媒体流或窗口画面中识别无畏
 需要 Visual Studio 2022 的 C++ 桌面工具、Windows SDK、CMake 3.24+、7-Zip、PowerShell 和网络访问。Qt 的 `.7z` 包通过 7-Zip 解压，避免 Windows 自带 `tar.exe` 缺少 LZMA 支持；安装脚本会从 PATH 或默认安装目录查找，也可用 `-SevenZip <7z.exe路径>` 指定。GitHub Windows 运行器使用预装的 7-Zip。
 
 ```powershell
-./scripts/install-deps.ps1
-./scripts/build.ps1
-./scripts/package.ps1
+./scripts/install-deps.ps1 -SkipFFmpeg
+./scripts/fetch-release-materials.ps1
+./scripts/build-ffmpeg.ps1 -SourceArchive .deps/release-sources/ffmpeg/ffmpeg-n8.1.3.tar.gz
+./scripts/build.ps1 -FFmpegRoot .deps/ffmpeg-minimal
+./scripts/package.ps1 -FFmpegRoot .deps/ffmpeg-minimal
 ```
 
-依赖安装在 `.deps`，下载均校验固定 SHA-256。Qt 6.8.3、FFmpeg 8.1 LGPL shared、ONNX Runtime 1.31.0；识别使用 PP-OCRv3 英文模型，定位使用 PP-OCRv4 检测模型。原生 ONNX DLL 从官方 wheel 提取，不安装 Python。
+依赖安装在 `.deps`，下载均校验固定 SHA-256/SHA-512。Qt 6.8.3、精简 FFmpeg n8.1.3、ONNX Runtime 1.31.0；识别使用 PP-OCRv3 英文模型，定位使用 PP-OCRv4 检测模型。原生 ONNX DLL 从官方 wheel 提取，不安装 Python。精简 FFmpeg 禁用外部自动探测，使用 Windows Schannel 处理 HTTPS。
 
-**FFmpeg 上游日构建仅保留约 14 天。** 已固定构建名称与哈希，过期后需提供同哈希的存档：`./scripts/install-deps.ps1 -FFmpegArchive <archive.zip>`。可通过 `-FFmpegArchiveUrl` 指定固定哈希的 HTTPS 镜像；GitHub CI 使用仓库变量 `QUEUEPILOT_FFMPEG_URL`。维护者应保存经核验的构建及对应源码，配置稳定镜像；不要改用 `latest` 绕过校验。详见 [依赖来源](licenses/SOURCES.md)。
+公开 Windows 包使用固定的官方 Qt/FFmpeg 源码构建。`fetch-release-materials.ps1` 会下载对应源码和微软官方再分发清单，`build-ffmpeg.ps1` 会在哈希不匹配或缺少 make 时停止。详见 [依赖来源](licenses/SOURCES.md) 和 [发布清单](docs/RELEASING.md)。
+
+仓库标签工作流会生成 Draft Windows Release，完成便携包、对应源码包和 SHA-256 清单的上传后才公开。发布标签必须与 `CMakeLists.txt` 中的项目版本一致，例如 `v0.1.0`。
 
 脚本会探测本机工具。安装脚本支持 `-VisualStudio`，构建及验证脚本还支持 `-CMake`、`-WindowsSdk` 指定路径。无交互桌面的环境可用 `./scripts/build.ps1 -SkipDesktopTests`。直接使用 CMake 时可设置 `-DBUILD_TESTING=OFF`。
 
-本地打包前关闭目标目录中运行的程序，或指定 `-DestinationDir dist/QueuePilot-review`。打包保留已有 `data`。**公开二进制发布前，须完成 [发布清单](docs/RELEASING.md) 中的 FFmpeg 对应源码和依赖声明工作；目前仅准备源码发布。**
+本地打包前关闭目标目录中运行的程序，或指定 `-DestinationDir dist/QueuePilot-review`。打包保留已有 `data`。公开包使用 `-ForPublicRelease`，会把对应源码和证据放进 `sources/`，并拒绝不完整材料。
 
 ## 验证
 

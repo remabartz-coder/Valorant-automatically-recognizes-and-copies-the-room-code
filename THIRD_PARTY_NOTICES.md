@@ -7,7 +7,7 @@ This document and the included license texts must accompany redistributions.
 | Component | Version | License and included material |
 | --- | --- | --- |
 | Qt Base | 6.8.3 | LGPL-3.0-only option; `licenses/Qt-LGPL-3.0.txt`, `Qt-GPL-3.0.txt`, `Qt-qtbase-6.8.3.spdx.json` and `qtbase-6.8.3/LICENSES/` |
-| FFmpeg, BtbN LGPL shared build | `n8.1.3-18-g46d899d7a0-20261013` | LGPL version 3 build; `licenses/FFmpeg-LICENSE.txt` and `FFmpeg-BUILD-CONFIG.txt`; external libraries have additional terms |
+| FFmpeg official source build | `n8.1.3` | LGPL-2.1-or-later; `licenses/FFmpeg-LICENSE.txt` and the build configuration in the package. The public build disables external autodetection and restricted components. |
 | ONNX Runtime | 1.31.0 | MIT; `licenses/ONNXRuntime-LICENSE.txt` and the official `ONNXRuntime-ThirdPartyNotices.txt` |
 | PaddleOCR recognition model and dictionary | PP-OCRv3 English | Apache-2.0; copyright (c) 2016 PaddlePaddle Authors; `licenses/PaddleOCR-Apache-2.0.txt` |
 | PaddleOCR text detector | PP-OCRv4 | Apache-2.0; same PaddleOCR license |
@@ -29,7 +29,5 @@ debugging their modifications, subject to their licenses. No Python interpreter
 or Python ONNX wrapper is used by the application.
 
 See `licenses/SOURCES.md` for pinned provenance and `models/README.md` for model
-hashes. Included notices and source links do not by themselves complete the
-corresponding-source obligations of a binary distribution. The unresolved
-release requirements are recorded in `licenses/BINARY_DISTRIBUTION.md`; local
-build packages must not be represented as cleared public binary releases.
+hashes. The public package's `sources/` directory contains the corresponding Qt
+and FFmpeg archives, build records and Microsoft redistribution evidence.

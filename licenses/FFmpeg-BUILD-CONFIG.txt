@@ -1,123 +1,40 @@
-Recorded from the installed .deps/ffmpeg/bin/ffmpeg.exe on 2026-10-15.
+ffmpeg version 8.1.3 Copyright (c) 2000-2026 the FFmpeg developers
+  built with Microsoft (R) C/C++ Optimizing Compiler 19.44
+  configuration: --prefix=/d/ChatGPT/wa/.deps/ffmpeg-minimal --toolchain=msvc --arch=x86_64 --target-os=win32 --cc=cl-queuepilot --cxx=cl-queuepilot --enable-shared --disable-static --disable-doc --disable-debug --disable-autodetect --disable-gpl --disable-nonfree --disable-version3 --enable-runtime-cpudetect --enable-network --enable-w32threads --enable-schannel --enable-protocol='http,https,tcp,tls,crypto,file,pipe' --enable-demuxers --enable-decoders --enable-parsers --enable-muxers --enable-protocols --enable-filters --enable-encoders
+  libavutil      60. 26.103 / 60. 26.103
+  libavcodec     62. 28.103 / 62. 28.103
+  libavformat    62. 12.103 / 62. 12.103
+  libavdevice    62.  3.103 / 62.  3.103
+  libavfilter    11. 14.103 / 11. 14.103
+  libswscale      9.  5.103 /  9.  5.103
+  libswresample   6.  3.103 /  6.  3.103
 
-ffmpeg version n8.1.3-18-g46d899d7a0-20261013
-Copyright (c) 2000-2026 the FFmpeg developers
-built with gcc 16.2.0 (crosstool-NG 1.29.0.7_b1a94f6)
+  configuration:
+    --prefix=/d/ChatGPT/wa/.deps/ffmpeg-minimal
+    --toolchain=msvc
+    --arch=x86_64
+    --target-os=win32
+    --cc=cl-queuepilot
+    --cxx=cl-queuepilot
+    --enable-shared
+    --disable-static
+    --disable-doc
+    --disable-debug
+    --disable-autodetect
+    --disable-gpl
+    --disable-nonfree
+    --disable-version3
+    --enable-runtime-cpudetect
+    --enable-network
+    --enable-w32threads
+    --enable-schannel
+    --enable-protocol='http,https,tcp,tls,crypto,file,pipe'
+    --enable-demuxers
+    --enable-decoders
+    --enable-parsers
+    --enable-muxers
+    --enable-protocols
+    --enable-filters
+    --enable-encoders
 
-Configuration:
---prefix=/ffbuild/prefix
---pkg-config-flags=--static
---pkg-config=pkg-config
---cross-prefix=x86_64-w64-mingw32-
---arch=x86_64
---target-os=mingw32
---enable-version3
---disable-debug
---enable-shared
---disable-static
---disable-w32threads
---enable-pthreads
---enable-iconv
---enable-zlib
---enable-libxml2
---enable-libvmaf
---enable-fontconfig
---enable-libharfbuzz
---enable-libfreetype
---enable-libfribidi
---enable-lcms2
---enable-vulkan
---enable-libshaderc
---enable-libdav1d
---enable-libvorbis
---enable-librav1e
---enable-librsvg
---disable-libxcb
---disable-xlib
---disable-libpulse
---enable-gmp
---enable-lzma
---enable-liblcevc-dec
---enable-opencl
---enable-amf
---enable-libaom
---disable-avisynth
---enable-chromaprint
---disable-libdavs2
---disable-libdvdread
---disable-libdvdnav
---disable-libfdk-aac
---enable-ffnvcodec
---enable-cuda-llvm
---disable-frei0r
---enable-libgme
---enable-libkvazaar
---enable-libaribb24
---enable-libaribcaption
---enable-libass
---enable-libbluray
---enable-libjxl
---enable-libmp3lame
---enable-libopus
---enable-libplacebo
---enable-librist
---enable-libssh
---enable-libtheora
---enable-libvpx
---enable-libwebp
---enable-libzmq
---enable-lv2
---enable-libvpl
---enable-openal
---enable-liboapv
---enable-libopencore-amrnb
---enable-libopencore-amrwb
---enable-libopenh264
---enable-libopenjpeg
---enable-libopenmpt
---disable-librubberband
---enable-schannel
---enable-sdl2
---enable-libsnappy
---enable-libsoxr
---enable-libsrt
---enable-libsvtav1
---enable-libtwolame
---enable-libuavs3d
---disable-libdrm
---enable-vaapi
---enable-vapoursynth
---disable-libvidstab
---enable-libvvenc
---disable-whisper
---disable-libx264
---disable-libx265
---disable-libxavs2
---disable-libxvid
---enable-libzimg
---enable-libzvbi
---extra-cflags=-DLIBTWOLAME_STATIC
---extra-cxxflags=
---extra-libs=-lgomp
---extra-ldflags=-pthread
---extra-ldexeflags=
---cc=x86_64-w64-mingw32-gcc
---cxx=x86_64-w64-mingw32-g++
---ar=x86_64-w64-mingw32-gcc-ar
---ranlib=x86_64-w64-mingw32-gcc-ranlib
---nm=x86_64-w64-mingw32-gcc-nm
---extra-version=20261013
-
-Libraries:
-libavutil      60.26.103
-libavcodec     62.28.103
-libavformat    62.12.103
-libavdevice    62.3.103
-libavfilter    11.14.103
-libswscale      9.5.103
-libswresample   6.3.103
-
-Only avcodec, avformat, avutil, swscale and swresample DLLs are deployed by
-QueuePilot. This build configuration includes components beyond those used by
-the application's code paths; consult the exact dependency source/build
-materials before distributing the DLLs.
+Exiting with exit code 0

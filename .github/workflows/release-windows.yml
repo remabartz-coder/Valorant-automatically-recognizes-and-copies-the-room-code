@@ -1,0 +1,119 @@
+name: Windows Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to package and publish
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+      - uses: actions/cache@v4
+        with:
+          path: |
+            .deps/downloads
+            .deps/release-sources
+          key: release-deps-${{ hashFiles('scripts/install-deps.ps1', 'scripts/fetch-release-materials.ps1', 'scripts/build-ffmpeg.ps1') }}
+      - name: Install MSYS2 build tools
+        uses: msys2/setup-msys2@v2
+        id: msys2
+        with:
+          msystem: MSYS
+          update: true
+          install: make nasm
+      - name: Install Qt, ONNX and models
+        shell: pwsh
+        run: ./scripts/install-deps.ps1 -SkipFFmpeg -SevenZip 'C:/Program Files/7-Zip/7z.exe'
+      - name: Fetch corresponding sources and notices
+        shell: pwsh
+        run: ./scripts/fetch-release-materials.ps1
+      - name: Build minimal FFmpeg
+        shell: pwsh
+        run: |
+          $msys = '${{ steps.msys2.outputs.msys2-location }}'
+          $env:PATH = "$msys/usr/bin;$env:PATH"
+          ./scripts/build-ffmpeg.ps1 -SourceArchive .deps/release-sources/ffmpeg/ffmpeg-n8.1.3.tar.gz -Bash "$msys/usr/bin/bash.exe" -Make "$msys/usr/bin/make.exe"
+      - name: Build and test
+        shell: pwsh
+        run: ./scripts/verify.ps1 -FFmpegRoot .deps/ffmpeg-minimal -SkipDesktopTests
+      - name: Package portable Windows build
+        shell: pwsh
+        run: ./scripts/package.ps1 -ForPublicRelease -FFmpegRoot .deps/ffmpeg-minimal -DestinationDir dist/QueuePilot
+      - name: Smoke test clean package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $screenshot = Join-Path $env:RUNNER_TEMP 'queuepilot-demo.png'
+          Remove-Item -LiteralPath $screenshot -Force -ErrorAction SilentlyContinue
+          $smokeRoot = Join-Path $env:RUNNER_TEMP 'queuepilot-package-smoke'
+          Remove-Item -LiteralPath $smokeRoot -Recurse -Force -ErrorAction SilentlyContinue
+          Copy-Item -LiteralPath (Resolve-Path 'dist/QueuePilot') -Destination $smokeRoot -Recurse
+          $process = Start-Process -FilePath (Join-Path $smokeRoot 'QueuePilot.exe') -ArgumentList @('--demo', '--no-output', '--screenshot', ('"' + $screenshot + '"')) -WorkingDirectory $smokeRoot -WindowStyle Hidden -PassThru
+          if (-not $process.WaitForExit(30000)) { $process.Kill(); throw 'QueuePilot demo smoke test timed out.' }
+          if ($process.ExitCode -ne 0) { throw "QueuePilot demo smoke test failed with exit code $($process.ExitCode)." }
+          if (-not (Test-Path -LiteralPath $screenshot -PathType Leaf)) { throw 'QueuePilot demo smoke test did not create a screenshot.' }
+          if ((Get-Item -LiteralPath $screenshot).Length -lt 1024) { throw 'QueuePilot demo screenshot is unexpectedly small.' }
+          if (Test-Path -LiteralPath 'dist/QueuePilot/data') { throw 'Clean package smoke test created a data directory.' }
+      - name: Archive and hash release assets
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = (Resolve-Path .).Path
+          if ($env:RELEASE_TAG -notmatch '^v(\d+\.\d+\.\d+)$') { throw "Release tag must be a semantic version such as v0.1.0: $env:RELEASE_TAG" }
+          $projectText = Get-Content -LiteralPath (Join-Path $root 'CMakeLists.txt') -Raw
+          $projectVersionMatch = [regex]::Match($projectText, 'project\(QueuePilot VERSION\s+(\d+\.\d+\.\d+)')
+          if (-not $projectVersionMatch.Success) { throw 'Could not read the QueuePilot project version.' }
+          $projectVersion = $projectVersionMatch.Groups[1].Value
+          if ($projectVersion -ne $env:RELEASE_TAG.Substring(1)) { throw "Tag $env:RELEASE_TAG does not match CMake version $projectVersion." }
+          $runtime = Join-Path $root "QueuePilot-Windows-x64-$env:RELEASE_TAG.zip"
+          $source = Join-Path $root "QueuePilot-corresponding-sources-$env:RELEASE_TAG.zip"
+          Compress-Archive -Path (Join-Path $root 'dist/QueuePilot/*') -DestinationPath $runtime -CompressionLevel Optimal
+          $staging = Join-Path $env:RUNNER_TEMP "queuepilot-corresponding-sources-$env:RELEASE_TAG"
+          Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $staging | Out-Null
+          foreach ($item in @('LICENSE','THIRD_PARTY_NOTICES.md','licenses')) {
+            $target = Join-Path $staging $item
+            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target) | Out-Null
+            Copy-Item -LiteralPath (Join-Path $root "dist/QueuePilot/$item") -Destination $target -Recurse -Force
+          }
+          $packageSources = Join-Path $root 'dist/QueuePilot/sources'
+          if (-not (Test-Path -LiteralPath $packageSources -PathType Container)) { throw "Packaged corresponding sources are missing: $packageSources" }
+          Copy-Item -LiteralPath $packageSources -Destination (Join-Path $staging 'sources') -Recurse -Force
+          Compress-Archive -Path (Join-Path $staging '*') -DestinationPath $source -CompressionLevel Optimal
+          $hashLines = foreach ($file in @($runtime,$source)) { $hash = (Get-FileHash $file -Algorithm SHA256).Hash; "$hash  $(Split-Path $file -Leaf)" }
+          $hashLines | Set-Content (Join-Path $root "SHA256SUMS-$env:RELEASE_TAG.txt") -Encoding ASCII
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $notes = @"
+          QueuePilot Windows x64 $env:RELEASE_TAG
+
+          This portable build uses Qt 6.8.3, ONNX Runtime 1.31.0 and a minimal FFmpeg n8.1.3 build. See THIRD_PARTY_NOTICES.md and the corresponding-sources archive for dependency terms and rebuild material.
+          "@
+          $notes | Set-Content release-notes.md -Encoding UTF8
+          gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) { throw "A GitHub Release already exists for $env:RELEASE_TAG; refusing to overwrite it." }
+          gh release create $env:RELEASE_TAG "QueuePilot-Windows-x64-$env:RELEASE_TAG.zip" "QueuePilot-corresponding-sources-$env:RELEASE_TAG.zip" "SHA256SUMS-$env:RELEASE_TAG.txt" --verify-tag --draft --title "QueuePilot $env:RELEASE_TAG" --notes-file release-notes.md
+          if ($LASTEXITCODE -ne 0) { throw 'Creating the draft GitHub Release failed.' }
+          gh release edit $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --draft=false

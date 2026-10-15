@@ -10,30 +10,14 @@
 
 ## FFmpeg LGPL Shared Build
 
-- Installed version: `n8.1.3-18-g46d899d7a0-20261013`, built with GCC 16.2.0.
-- Exact FFmpeg source commit: `46d899d7a02bc63237472cc4897258d5ddf274ac`; source: https://github.com/FFmpeg/FFmpeg/tree/46d899d7a02bc63237472cc4897258d5ddf274ac
-- Build-script snapshot: https://github.com/BtbN/FFmpeg-Builds/tree/63ac3265b0789ea16c7b1f8351cd2ad195a28722
-- Release: https://github.com/BtbN/FFmpeg-Builds/releases/tag/autobuild-2026-10-13-13-05
-- Pinned archive: https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-10-13-13-05/ffmpeg-n8.1.3-18-g46d899d7a0-win64-lgpl-shared-8.1.zip
-- Pinned archive SHA-256: `19D92DFB1481E72E4E8F94844BF609418297A646F33DEB6864C409CA752469C4`.
-- Prior `latest` archive SHA-256: `6FBE3233F0B769CE6D906FC200EF0B874B681FA1554520F6880BFB45B4BEFA58`. Its different internal directory name produces a different ZIP hash. Never substitute one archive for the other without checking its expected hash.
-- Actual configure flags and library versions are recorded in `FFmpeg-BUILD-CONFIG.txt`. The build enables version 3, uses FFmpeg shared libraries, and statically incorporates external dependencies.
+- Version: `n8.1.3` (official source tag).
+- Source archive: https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n8.1.3.tar.gz
+- SHA-512: `8c667090bcdc70796caaa8cdc2cf82e57d7c7f6feedcb0ec7251cefd6a0c63b7cad203a86c800d3e2f69ca91255167aa4e631701060b96d576d1a9666ca7aafe`.
+- `scripts/build-ffmpeg.ps1` builds the shared libraries with MSVC, disables autodetected external libraries, GPL, nonfree and version-3 components, and enables the Windows Schannel HTTPS path. `FFmpeg-BUILD-CONFIG.txt` in the resulting package records the actual configure flags.
 
-BtbN's published retention policy keeps the most recent 14 daily builds and the
-last build of each month for two years. This October 13 daily URL is therefore
-not a durable dependency mirror. Keep a hash-verified copy of the pinned archive.
-When the upstream asset has expired, obtain that exact archive from your own
-verified backup and pass its local path to the installer:
-
-```powershell
-./scripts/install-deps.ps1 -FFmpegArchive C:/dependency-cache/ffmpeg-n8.1.3-18-g46d899d7a0-win64-lgpl-shared-8.1.zip
-```
-
-The installer still verifies the same SHA-256. This option only replaces the
-FFmpeg download; it does not make installation of all other dependencies
-offline. Publishing source for QueuePilot does not distribute the FFmpeg DLLs.
-For a binary release, retain and publish the exact corresponding FFmpeg and
-external-library sources as described in `BINARY_DISTRIBUTION.md`.
+The public Windows package is built from this fixed source archive. The exact
+archive and the build script are included in the corresponding-sources Release
+asset.
 
 ## ONNX Runtime 1.31.0
 
